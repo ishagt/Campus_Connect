@@ -1,0 +1,787 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Connect | Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'campus_connect/style.css' %}">
+</head>
+<body>
+
+<div class="container">
+    <aside class="sidebar">
+        <div>
+            <a href="#" class="logo">
+                <div class="logo-circle">CC</div>
+                <h2 style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">CampusConnect</h2>
+            </a>
+
+            <div class="menu">
+                <a onclick="switchView('home', this)" class="active"><i class="fas fa-home"></i> Home</a>
+                <a onclick="switchView('profile', this)"><i class="far fa-user"></i> Profile</a>
+                <a onclick="switchView('announcements', this)"><i class="far fa-calendar"></i> Announcements</a>
+                <a onclick="switchView('assignments', this)"><i class="fas fa-book-bookmark"></i> Assignments</a>
+                <a onclick="switchView('notifications', this)"><i class="far fa-bell"></i> Notifications</a>
+            </div>
+        </div>
+
+        <div class="bottom-section">
+            <a href="#" onclick="handleSignOut(event)" class="menu" style="text-decoration: none; color: #ef4444; font-size: 14px; padding: 10px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-sign-out-alt" style="width: 16px; text-align: center;"></i> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <div class="content-wrapper">
+        <!-- Home View -->
+        <div id="home" class="dashboard-view active-view">
+            <div class="main">
+                <div class="home-post-card">
+                    <div style="display: flex; gap: 15px;">
+                        <div class="user-avatar-small">ME</div>
+                        <textarea id="postInput" placeholder="What's happening at NEC?"></textarea>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                        <button class="post-submit-btn" onclick="addNewPost()">
+                            <i class="fas fa-paper-plane"></i> Post
+                        </button>
+                    </div>
+                </div>
+                <div id="feedList"></div>
+            </div>
+
+            <aside class="right-panel">
+                <div class="panel-section">
+                    <h3 class="panel-title"><i class="far fa-calendar-check" style="color: var(--primary);"></i> Upcoming Events</h3>
+                    <div class="event-item">
+                        <p class="event-name">Mental Health Awareness Panel</p>
+                        <p class="event-date">May 10, 8:31 AM</p>
+                    </div>
+                    <div class="event-item">
+                        <p class="event-name">Annual Hackathon 2026</p>
+                        <p class="event-date">May 16, 8:31 AM</p>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Profile View -->
+        <div id="profile" class="dashboard-view">
+            <div class="profile-v2-container">
+                <div class="profile-v2-card">
+                    <div class="profile-v2-banner"></div>
+                    
+                    <div class="profile-v2-header-content">
+                        <div class="profile-v2-avatar-row">
+                            <div id="profileAvatar" class="profile-v2-avatar">{{ user.first_name|default:"U"|make_list|first }}</div>
+                            <button class="profile-v2-edit-btn" onclick="openEditProfileModal()">Edit Profile</button>
+                        </div>
+                        
+                        <div class="profile-v2-info">
+                            <h1 id="profileName" class="profile-v2-name">{{ user.first_name|default:"User" }}</h1>
+                            <p id="profileUsername" class="profile-v2-username">@{{ user.user_name|default:"user" }}</p>
+                            <p id="profileDept" class="profile-v2-dept">{{ user.department|default:"No department" }}</p>
+                        </div>
+
+                        <div class="profile-v2-about-section">
+                            <h3 class="profile-v2-about-title">About Me</h3>
+                            <p id="profileBio" class="profile-v2-about-text">{{ user.profile.bio|default:"Welcome to my profile! Click 'Edit Profile' to update your campus bio details." }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Modal -->
+        <div id="editProfileModal" class="profile-v2-modal-overlay" style="display: none;">
+            <div class="profile-v2-modal-card">
+                <h2>Edit Profile</h2>
+                <label class="profile-v2-input-label">Full Name</label>
+                <input type="text" id="editName" placeholder="Name" value="{{ user.first_name|default:'' }}">
+                <label class="profile-v2-input-label">Department</label>
+                <input type="text" id="editDept" placeholder="Department" value="{{ user.department|default:'' }}">
+                <label class="profile-v2-input-label">About Me</label>
+                <textarea id="editBio" placeholder="Tell us about yourself..." rows="4">{{ user.profile.bio|default:'' }}</textarea>
+                <button class="profile-v2-save-btn" onclick="saveUserProfile()">Save Changes</button>
+                <button class="profile-v2-cancel-btn" onclick="closeEditProfileModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Announcements View -->
+        <div id="announcements" class="dashboard-view">
+            <div class="main full-width">
+                <div class="announcements-header-row">
+                    <div>
+                        <h1 class="page-title">Announcements</h1>
+                        <p class="page-subtitle">Official campus news and updates</p>
+                    </div>
+                    <div id="announcementTeacherBtnSlot" style="display: none;">
+                        <button class="add-announcement-btn" onclick="openAnnouncementModal()">
+                            <i class="fas fa-plus"></i> New Announcement
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-tags-bar">
+                    <button class="filter-tag active-filter" onclick="filterAnnouncements('Announcements', this)">Announcements</button>
+                    <button class="filter-tag" onclick="filterAnnouncements('Events', this)">Events</button>
+                    <button class="filter-tag" onclick="filterAnnouncements('all', this)">All</button>
+                </div>
+
+                <div id="announcementsContainer" class="announcements-feed"></div>
+            </div>
+        </div>
+
+        <!-- Announcement Modal -->
+        <div id="announcementModalOverlay" class="modal-overlay">
+            <div class="modal-card">
+                <h2 style="margin-bottom: 20px;">Create Announcement</h2>
+                <input type="text" id="announcementTitle" placeholder="Announcement Title">
+                <input type="text" id="announcementSender" placeholder="From (e.g., Student Affairs Office)">
+                
+                <select id="announcementCategory" style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                    <option value="Announcements">Announcement (Notices, Academics, Schedules)</option>
+                    <option value="Events">Event (Hackathons, Sports, Meetups, clubs)</option>
+                </select>
+
+                <textarea id="announcementDesc" placeholder="Write update details here..." rows="4"></textarea>
+                <button class="save-btn" onclick="saveAnnouncement()" style="background: #6b21a8;">Publish Update</button>
+                <button onclick="closeAnnouncementModal()" style="width:100%; background:none; border:none; margin-top:10px; cursor:pointer; color:#64748b;">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Assignments View -->
+        <div id="assignments" class="dashboard-view">
+            <div class="main">
+                <div class="header-row">
+                    <div>
+                        <h1>Assignments</h1>
+                        <p>Track your coursework and deadlines</p>
+                    </div>
+                    <div id="teacherBtnSlot" style="display: none;">
+                        <button class="add-task-btn" onclick="openModal()">
+                            <i class="fas fa-plus"></i> Add Task
+                        </button>
+                    </div>
+                </div>
+                <div id="assignmentList"></div>
+            </div>
+            <div class="right-panel">
+                <h3 class="panel-title">📅 Academic Calendar</h3>
+                <div style="background: #babfc9; border-radius: 16px; padding: 20px;">
+                    <p style="font-size: 14px; color: #000000;">No events scheduled for today.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment Modal -->
+        <div id="modalOverlay" class="modal-overlay">
+            <div class="modal-card" style="max-width: 600px;">
+                <h2 style="margin-bottom: 20px;">Create Assignment</h2>
+                
+                <input type="text" id="taskTitle" placeholder="Assignment Title" required>
+                <input type="text" id="taskCourse" placeholder="Course Name" required>
+                
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="taskDepartment" placeholder="Department (e.g., Computer)" style="flex: 1;">
+                    <input type="number" id="taskYear" placeholder="Year" style="flex: 0.5;">
+                    <input type="text" id="taskSection" placeholder="Section (e.g., A)" style="flex: 0.5;">
+                </div>
+                
+                <textarea id="taskDesc" placeholder="Description..." rows="4"></textarea>
+                
+                <div style="margin: 10px 0;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Due Date:</label>
+                    <input type="datetime-local" id="taskDueDate">
+                </div>
+                
+                <div style="margin: 10px 0;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Upload File (Optional):</label>
+                    <input type="file" id="taskFile" accept=".pdf,.docx,.doc,.txt,.zip">
+                </div>
+                
+                <button class="save-btn" onclick="saveTask()" style="background: #6b21a8;">Post Assignment</button>
+                <button onclick="closeModal()" style="width:100%; background:none; border:none; margin-top:10px; cursor:pointer; color:#64748b;">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Notifications View -->
+        <div id="notifications" class="dashboard-view">
+            <div class="main">
+                <h1>Notifications</h1>
+                <p style="color: #64748b;">Notifications will appear here.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT - SINGLE CLEAN VERSION -->
+<!-- ============================================ -->
+<script>
+    // ============================================
+    // PASS DJANGO USER DATA TO JAVASCRIPT
+    // ============================================
+    const currentUser = {
+        name: "{{ user.first_name|default:'User' }}",
+        email: "{{ user.email|default:'' }}",
+        role: "{{ user.role|default:'student' }}",
+        username: "{{ user.user_name|default:'' }}",
+        department: "{{ user.department|default:'' }}",
+        bio: "{{ user.profile.bio|default:'Welcome to my profile!' }}"
+    };
+    const currentUserRole = "{{ user.role|default:'student' }}";
+
+    // ============================================
+    // CSRF TOKEN HELPER
+    // ============================================
+    function getCsrfToken() {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken=')) {
+                    cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // ============================================
+    // HANDLE SIGN OUT
+    // ============================================
+    function handleSignOut(event) {
+        if (event) event.preventDefault();
+        
+        if (confirm('Are you sure you want to sign out?')) {
+            // Clear all local storage
+            localStorage.clear();
+            // Redirect to logout URL
+            window.location.href = '/logout/';
+        }
+    }
+
+    // ============================================
+    // VIEW SWITCHING
+    // ============================================
+    function switchView(viewId, element) {
+        // Update menu items
+        document.querySelectorAll('.menu a').forEach(link => link.classList.remove('active'));
+        if (element) element.classList.add('active');
+        
+        // Update views
+        document.querySelectorAll('.dashboard-view').forEach(view => view.classList.remove('active-view'));
+        const view = document.getElementById(viewId);
+        if (view) view.classList.add('active-view');
+    }
+
+    // ============================================
+    // NOTIFICATION HELPER
+    // ============================================
+    function showNotification(message) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // ============================================
+    // PROFILE FUNCTIONS
+    // ============================================
+    function renderUserProfile() {
+        const user = JSON.parse(localStorage.getItem('currentUser')) || {
+            name: 'User',
+            username: 'user',
+            department: 'No department',
+            bio: 'Welcome to my profile!'
+        };
+
+        const nameEl = document.getElementById('profileName');
+        if (nameEl) nameEl.textContent = user.name || 'User';
+        
+        const usernameEl = document.getElementById('profileUsername');
+        if (usernameEl) usernameEl.textContent = `@${user.username || 'user'}`;
+        
+        const deptEl = document.getElementById('profileDept');
+        if (deptEl) deptEl.textContent = user.department || 'No department';
+        
+        const bioEl = document.getElementById('profileBio');
+        if (bioEl) bioEl.textContent = user.bio || "Welcome to my profile! Click 'Edit Profile' to update your campus bio details.";
+        
+        const avatar = document.getElementById('profileAvatar');
+        if (avatar && user.name) {
+            avatar.textContent = user.name.charAt(0).toUpperCase();
+        }
+    }
+
+    function openEditProfileModal() {
+        const user = JSON.parse(localStorage.getItem('currentUser')) || {};
+        
+        document.getElementById('editName').value = user.name || '';
+        document.getElementById('editDept').value = user.department || '';
+        document.getElementById('editBio').value = user.bio || '';
+
+        const modal = document.getElementById('editProfileModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeEditProfileModal() {
+        const modal = document.getElementById('editProfileModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function saveUserProfile() {
+        const name = document.getElementById('editName').value.trim();
+        const department = document.getElementById('editDept').value.trim();
+        const bio = document.getElementById('editBio').value.trim();
+
+        if (!name) {
+            alert("Name field cannot be left blank.");
+            return;
+        }
+
+        fetch('/api/update-profile/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ name, department, bio })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let user = JSON.parse(localStorage.getItem('currentUser')) || {};
+                user.name = name;
+                user.department = department;
+                user.bio = bio;
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                
+                renderUserProfile();
+                closeEditProfileModal();
+                showNotification('Profile updated successfully!');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to update profile.');
+        });
+    }
+
+    // ============================================
+    // ASSIGNMENT FUNCTIONS
+    // ============================================
+    function openModal() {
+        const modal = document.getElementById('modalOverlay');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('modalOverlay');
+        if (modal) {
+            modal.style.display = 'none';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskCourse').value = '';
+            document.getElementById('taskDepartment').value = '';
+            document.getElementById('taskYear').value = '';
+            document.getElementById('taskSection').value = '';
+            document.getElementById('taskDesc').value = '';
+            document.getElementById('taskDueDate').value = '';
+            document.getElementById('taskFile').value = '';
+        }
+    }
+
+    function saveTask() {
+        const title = document.getElementById('taskTitle').value.trim();
+        const course = document.getElementById('taskCourse').value.trim();
+        const department = document.getElementById('taskDepartment').value.trim();
+        const year = document.getElementById('taskYear').value;
+        const section = document.getElementById('taskSection').value.trim();
+        const description = document.getElementById('taskDesc').value.trim();
+        const dueDate = document.getElementById('taskDueDate').value;
+        
+        if (!title || !course) {
+            alert("Title and Course are required");
+            return;
+        }
+
+        // Handle file upload with FormData
+        const fileInput = document.getElementById('taskFile');
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('course', course);
+        formData.append('department', department || '');
+        formData.append('year', year || '');
+        formData.append('section', section || '');
+        formData.append('description', description || '');
+        formData.append('due_date', dueDate || '');
+        if (fileInput.files.length > 0) {
+            formData.append('file', fileInput.files[0]);
+        }
+
+        fetch('/api/add-assignment/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                closeModal();
+                showNotification('Assignment created successfully!');
+                fetchAssignmentsFromServer();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to create assignment.');
+        });
+    }
+
+    function fetchAssignmentsFromServer() {
+        fetch('/api/assignments/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    renderAssignments(data.assignments);
+                }
+            })
+            .catch(error => console.error('Error fetching assignments:', error));
+    }
+
+    function renderAssignments(assignments) {
+        const container = document.getElementById('assignmentList');
+        if (!container) return;
+        
+        if (!assignments || assignments.length === 0) {
+            container.innerHTML = `<p style="text-align: center; color: #94a3b8; padding: 40px;">No assignments yet.</p>`;
+            return;
+        }
+        
+        container.innerHTML = assignments.map(task => `
+            <div class="assignment-card">
+                <div class="status-dot"></div>
+                <div class="card-info">
+                    <h3>${task.title}</h3>
+                    <div class="card-meta">
+                        <span>${task.course || 'No course'}</span>
+                        ${task.department ? `<span>${task.department}</span>` : ''}
+                        ${task.year ? `<span>Year ${task.year}</span>` : ''}
+                        ${task.section ? `<span>Section ${task.section}</span>` : ''}
+                    </div>
+                    <p class="card-desc">${task.description || 'No description'}</p>
+                    <div class="card-time"><i class="far fa-clock"></i> Due: ${task.due_date || 'No date'}</div>
+                    <div style="font-size: 12px; color: #64748b;">Created by: ${task.created_by || 'Teacher'}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ============================================
+    // POST FUNCTIONS
+    // ============================================
+    let posts = [];
+
+    function fetchPostsFromServer() {
+        fetch('/api/posts/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    posts = data.posts;
+                    renderFeed();
+                }
+            })
+            .catch(error => console.error('Error fetching posts:', error));
+    }
+
+    function renderFeed() {
+        const container = document.getElementById('feedList');
+        if (!container) return;
+
+        if (!posts || posts.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #94a3b8;">
+                    <i class="fas fa-newspaper" style="font-size: 48px; margin-bottom: 15px;"></i>
+                    <p>No posts yet. Be the first to share something!</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = posts.map(post => `
+            <div class="feed-card" style="position: relative; margin-bottom: 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                <div class="feed-header" style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                    <div class="user-avatar-small" style="background: #e0f2fe; color: #0369a1; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ${post.author ? post.author.charAt(0) : 'U'}
+                    </div>
+                    <div class="feed-user-info">
+                        <h4 style="margin: 0; font-size: 14px; color: #1e293b;">${post.author} <span style="font-size: 12px; color: #64748b; font-weight: 400;">@${post.author_username || 'user'} • ${post.created_at}</span></h4>
+                    </div>
+                </div>
+                <div class="feed-content" style="font-size: 14px; color: #334155; line-height: 1.5; margin-bottom: 12px;">${post.content_text}</div>
+                <div class="feed-actions" style="display: flex; gap: 16px; font-size: 13px; color: #64748b;">
+                    <span style="cursor:pointer; display: flex; align-items: center; gap: 4px;">
+                        <i class="far fa-heart"></i> Like (${post.likes || 0})
+                    </span>
+                    <span style="cursor:pointer; display: flex; align-items: center; gap: 4px;">
+                        <i class="far fa-comment"></i> Comment (${post.comments_count || 0})
+                    </span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function addNewPost() {
+        const text = document.getElementById('postInput').value.trim();
+        if (!text) {
+            alert("Please write something before posting.");
+            return;
+        }
+
+        fetch('/api/add-post/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ content: text })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('postInput').value = '';
+                fetchPostsFromServer();
+                showNotification('Post published successfully!');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to publish post.');
+        });
+    }
+
+    // ============================================
+    // ANNOUNCEMENT FUNCTIONS
+    // ============================================
+    function fetchAnnouncementsFromServer() {
+        fetch('/api/announcements/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    renderAnnouncements(data.announcements);
+                }
+            })
+            .catch(error => console.error('Error fetching announcements:', error));
+    }
+
+    function renderAnnouncements(announcements) {
+        const container = document.getElementById('announcementsContainer');
+        if (!container) return;
+        
+        const data = announcements || [];
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const isAdmin = currentUser.role === 'admin';
+        
+        if (data.length === 0) {
+            container.innerHTML = `<p style="text-align: center; color: #94a3b8; padding: 40px;">No announcements yet. Check back later!</p>`;
+            return;
+        }
+
+        container.innerHTML = data.map(item => `
+            <div class="announcement-card" data-id="${item.id || ''}">
+                <div class="announcement-header">
+                    <div>
+                        <span class="announcement-tag ${item.category === 'Events' ? 'event-tag' : ''}">${item.category || 'Announcements'}</span>
+                        <span class="announcement-date">${item.created_at || new Date().toLocaleDateString()}</span>
+                    </div>
+                    ${isAdmin ? `
+                    <div class="announcement-actions">
+                        <button class="delete-btn" onclick="deleteAnnouncement(${item.id || 0})" title="Delete Announcement">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+                <h3 class="announcement-title">${item.title || 'Untitled'}</h3>
+                <p class="announcement-sender">From: ${item.sender || 'Campus Admin'}</p>
+                <p class="announcement-description">${item.description || 'No description provided.'}</p>
+            </div>
+        `).join('');
+    }
+
+    function openAnnouncementModal() {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser.role !== 'admin') {
+            alert('⚠️ Only admins can create announcements.');
+            return;
+        }
+        document.getElementById('announcementModalOverlay').style.display = 'flex';
+    }
+
+    function closeAnnouncementModal() {
+        document.getElementById('announcementModalOverlay').style.display = 'none';
+        document.getElementById('announcementTitle').value = '';
+        document.getElementById('announcementSender').value = '';
+        document.getElementById('announcementDesc').value = '';
+    }
+
+    function saveAnnouncement() {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser.role !== 'admin') {
+            alert('⚠️ Only admins can create announcements.');
+            return;
+        }
+        
+        const title = document.getElementById('announcementTitle').value.trim();
+        const sender = document.getElementById('announcementSender').value.trim();
+        const category = document.getElementById('announcementCategory').value;
+        const description = document.getElementById('announcementDesc').value.trim();
+        
+        if (!title || !description) {
+            alert('⚠️ Please fill in all required fields.');
+            return;
+        }
+
+        fetch('/api/add-announcement/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                title: title,
+                sender: sender || 'Campus Admin',
+                category: category,
+                description: description
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                closeAnnouncementModal();
+                fetchAnnouncementsFromServer();
+                showNotification('Announcement published successfully!');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to publish announcement.');
+        });
+    }
+
+    function deleteAnnouncement(announcementId) {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser.role !== 'admin') {
+            alert('⚠️ Only admins can delete announcements.');
+            return;
+        }
+        
+        if (!confirm('Are you sure you want to delete this announcement?')) return;
+
+        fetch(`/api/delete-announcement/${announcementId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                fetchAnnouncementsFromServer();
+                showNotification('Announcement deleted successfully!');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
+    }
+
+    function filterAnnouncements(category, element) {
+        document.querySelectorAll('.filter-tag').forEach(tag => {
+            tag.classList.remove('active-filter');
+        });
+        if (element) {
+            element.classList.add('active-filter');
+        }
+        
+        // Get all announcements and filter
+        fetch('/api/announcements/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    let filtered = data.announcements;
+                    if (category !== 'all') {
+                        filtered = filtered.filter(item => item.category === category);
+                    }
+                    renderAnnouncements(filtered);
+                }
+            });
+    }
+
+    // ============================================
+    // INITIALIZE EVERYTHING ON PAGE LOAD
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        // Store user data
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        // Show/hide teacher buttons
+        const userRole = currentUser.role || 'student';
+        
+        const teacherBtn = document.getElementById('teacherBtnSlot');
+        if (teacherBtn) {
+            teacherBtn.style.display = (userRole === 'teacher' || userRole === 'admin') ? 'block' : 'none';
+        }
+        
+        const annBtn = document.getElementById('announcementTeacherBtnSlot');
+        if (annBtn) {
+            annBtn.style.display = (userRole === 'admin') ? 'block' : 'none';
+        }
+        
+        // Load all data
+        renderUserProfile();
+        fetchPostsFromServer();
+        fetchAssignmentsFromServer();
+        fetchAnnouncementsFromServer();
+    });
+</script>
+
+<!-- External JS files (optional, as all functionality is now inline) -->
+<script src="{% static 'campus_connect/clean.js' %}"></script>
+<script src="{% static 'campus_connect/announcement.js' %}"></script>
+<script src="{% static 'campus_connect/profile.js' %}"></script>
+
+</body>
+</html>
